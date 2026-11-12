@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Farrier engine + API. Data (SQLite, sealed keys, master.key, change packs) lives in /data.
-FROM python:3.13-slim
+FROM python:3.15-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
