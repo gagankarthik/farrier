@@ -10,11 +10,17 @@ All notable changes to Farrier are recorded here. The format follows
 
 Until 1.0.0, minor releases may still change the API; each one says how to upgrade.
 
-To release: bump `farrier/__init__.py`, `web/package.json` and `site/package.json` to the same version, move the
-Unreleased notes under a new heading, then push the tag `vX.Y.Z`. The release workflow refuses
-a tag that doesn't match both versions and this file.
+To release: bump `farrier/__init__.py`, `web/package.json`, `site/package.json` and the default image in
+`docker-compose.yml` to the same version, move the Unreleased notes under a new heading, then push the tag
+`vX.Y.Z`. The release workflow refuses a tag that doesn't match them and this file; it publishes the signed
+images, then creates the GitHub Release with this file's notes for the version.
 
 ## [Unreleased]
+
+### Changed
+
+- The release workflow also creates the GitHub Release, with the tag's CHANGELOG.md notes, once both
+  images are published and signed.
 
 ### Fixed
 
