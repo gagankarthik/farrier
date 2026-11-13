@@ -11,6 +11,13 @@ from pathlib import Path
 from farrier.core import policy
 
 
+def _dashboard_dev_command(base: str) -> str:
+    """Return the platform-appropriate command for starting the web dashboard."""
+    if sys.platform == "win32":
+        return f'cd web; $env:FARRIER_API_URL="{base}"; npm run dev'
+    return f"cd web && FARRIER_API_URL={base} npm run dev"
+
+
 def _engine(args):
     from farrier.core.engine import Engine
     return Engine(Path(args.data))
@@ -36,7 +43,7 @@ def cmd_serve(args):
     signal.signal(signal.SIGTERM, lambda *_: None)
     base = f"http://{args.host}:{args.port}"
     print(f"farrier engine API on {base}/api (OpenAPI at {base}/docs); dashboard: `docker compose up` runs both, "
-          f"or cd web && FARRIER_API_URL={base} npm run dev", flush=True)
+          f"or {_dashboard_dev_command(base)}", flush=True)
     deadline = time.monotonic() + 2 * args.grace
     try:
         uvicorn.run(create_app(eng, tick_seconds=args.tick), host=args.host, port=args.port,
@@ -99,7 +106,7 @@ def cmd_demo(args):
     print(f"demo estate: {len(eng.store.endpoints())} endpoints served by SNI on 127.0.0.1:{srv.port}")
     eng.tick()
     print(f"api:         http://{args.host}:{args.port}/api  (OpenAPI docs at /docs)")
-    print(f"dashboard:   cd web && FARRIER_API_URL=http://{args.host}:{args.port} npm run dev", flush=True)
+    print(f"dashboard:   {_dashboard_dev_command(f'http://{args.host}:{args.port}')}", flush=True)
     uvicorn.run(create_app(eng, tick_seconds=args.tick), host=args.host, port=args.port, log_level="warning")
 
 
