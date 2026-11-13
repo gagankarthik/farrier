@@ -63,6 +63,7 @@ def test_serve_prints_where_the_api_and_dashboard_are(capsys, data_dir, monkeypa
 
     import uvicorn
     monkeypatch.setattr(uvicorn, "run", lambda *a, **kw: None)
+    monkeypatch.setattr("farrier.cli.sys.platform", "linux")  # the hint is platform-specific
     before = signal.getsignal(signal.SIGTERM)
     try:
         main(["--data", str(data_dir), "serve", "--port", "8799", "--grace", "0.1"])
