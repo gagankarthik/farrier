@@ -22,6 +22,10 @@ images, then creates the GitHub Release with this file's notes for the version.
 - The release workflow also creates the GitHub Release, with the tag's CHANGELOG.md notes, once both
   images are published and signed.
 
+### Fixed
+
+- CLI dashboard startup hints now use PowerShell-compatible syntax on Windows.
+
 ## [0.2.0] - 2026-11-13
 
 ### Upgrading from 0.1.0

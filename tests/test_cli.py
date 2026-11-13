@@ -10,7 +10,7 @@ from test_ssh import FakeSSHServer
 
 from farrier import __version__
 from farrier.api.app import create_app
-from farrier.cli import NOT_FOUND, main
+from farrier.cli import NOT_FOUND, main, _dashboard_dev_command
 
 
 def run(capsys, data_dir, *argv) -> str:
@@ -63,6 +63,7 @@ def test_serve_prints_where_the_api_and_dashboard_are(capsys, data_dir, monkeypa
 
     import uvicorn
     monkeypatch.setattr(uvicorn, "run", lambda *a, **kw: None)
+    monkeypatch.setattr("farrier.cli.sys.platform", "linux")  # the hint is platform-specific
     before = signal.getsignal(signal.SIGTERM)
     try:
         main(["--data", str(data_dir), "serve", "--port", "8799", "--grace", "0.1"])
@@ -71,6 +72,15 @@ def test_serve_prints_where_the_api_and_dashboard_are(capsys, data_dir, monkeypa
     out = capsys.readouterr().out
     assert "http://127.0.0.1:8799/api" in out and "http://127.0.0.1:8799/docs" in out
     assert "docker compose up" in out and "FARRIER_API_URL=http://127.0.0.1:8799 npm run dev" in out
+
+
+@pytest.mark.parametrize("platform, expected", [
+    ("linux", "cd web && FARRIER_API_URL=http://127.0.0.1:8799 npm run dev"),
+    ("win32", 'cd web; $env:FARRIER_API_URL="http://127.0.0.1:8799"; npm run dev'),
+])
+def test_dashboard_start_hint_matches_shell_platform(monkeypatch, platform, expected):
+    monkeypatch.setattr("farrier.cli.sys.platform", platform)
+    assert _dashboard_dev_command("http://127.0.0.1:8799") == expected
 
 
 def test_engine_root_explains_where_the_dashboard_is(engine):
