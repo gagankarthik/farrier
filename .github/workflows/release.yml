@@ -5,6 +5,7 @@ name: Release images
 # Push a tag like v0.2.0 to publish multi-arch images (amd64 + arm64) to GHCR:
 #   ghcr.io/<owner>/farrier       the engine and API
 #   ghcr.io/<owner>/farrier-web   the dashboard (the website, site/, is hosted separately)
+# then create the GitHub Release (title "Farrier X.Y.Z", notes from the tag's CHANGELOG.md section).
 on:
   push:
     tags: ["v*"]
@@ -71,3 +72,44 @@ jobs:
       - uses: sigstore/cosign-installer@v3
       - name: Sign the image
         run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/${{ matrix.name }}@${{ steps.build.outputs.digest }}
+
+  # The GitHub Release page, from the tag's CHANGELOG.md section, once both images are published and signed.
+  # Re-running a tag updates its release; a SemVer pre-release tag (v1.2.0-rc.1) is marked pre-release.
+  github-release:
+    needs: image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Release notes from CHANGELOG.md
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'EOF'
+          import os, re
+          tag = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(rf"^## \[{re.escape(tag)}\][^\n]*\n(.*?)(?=^## \[|\Z)", text, re.S | re.M)
+          if not m or not m.group(1).strip():
+              raise SystemExit(f"CHANGELOG.md has no notes under [{tag}]")
+          owner, repo = os.environ["OWNER"], os.environ["REPO"]
+          raw = f"https://raw.githubusercontent.com/{repo}/main/install.sh"
+          head = (f"Images (multi-arch, signed with cosign): `ghcr.io/{owner}/farrier:{tag}` and "
+                  f"`ghcr.io/{owner}/farrier-web:{tag}`.\n\n```bash\n"
+                  f"curl -fsSL {raw} | sh                    # install or upgrade\n"
+                  f"curl -fsSL {raw} | FARRIER_MODE=demo sh  # try the demo\n```\n\n")
+          open("release-notes.md", "w", encoding="utf-8").write(head + m.group(1).strip() + "\n")
+          EOF
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          case "$tag" in *-*) kind="--prerelease" ;; *) kind="--latest" ;; esac
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --title "Farrier ${tag#v}" --notes-file release-notes.md $kind
+          else
+            gh release create "$tag" --title "Farrier ${tag#v}" --notes-file release-notes.md --verify-tag $kind
+          fi
