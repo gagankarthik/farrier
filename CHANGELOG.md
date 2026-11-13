@@ -16,6 +16,10 @@ a tag that doesn't match both versions and this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- CLI dashboard startup hints now use PowerShell-compatible syntax on Windows.
+
 ## [0.2.0] - 2026-11-13
 
 ### Upgrading from 0.1.0
