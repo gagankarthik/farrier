@@ -14,7 +14,7 @@ No agents. No manual renewals. No missed expirations. Open source, self-hosted, 
 [![License: MIT](https://img.shields.io/badge/license-MIT-2563eb?labelColor=141414)](LICENSE)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-141414)
 
-[Website](https://farrier-erc1.vercel.app) · [Docs](https://farrier-erc1.vercel.app/docs) · [Install](https://farrier-erc1.vercel.app/docs/install/) · [Security](https://farrier-erc1.vercel.app/docs/security/)
+[Website](https://farrier-erc1.vercel.app) · [Docs](https://farrier-erc1.vercel.app/docs) · [Install](https://farrier.vercel.app/docs/install/) · [Security](https://farrier.vercel.app/docs/security/)
 
 <img src="site/public/product/dashboard.png" alt="The Farrier dashboard: endpoints, expiring certificates, a renewal calendar and change packs waiting on a person" width="900">
 
