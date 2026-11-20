@@ -135,6 +135,30 @@ def test_crypto_scan_summary_and_cbom(capsys, data_dir, served, tmp_path):
     assert json.loads(run(capsys, data_dir, "crypto", "cbom"))["bomFormat"] == "CycloneDX"
 
 
+def test_scans_file_results_under_named_project(capsys, data_dir, engine, ssh_server, served):
+    s, _ = served
+    S = engine.store
+    S.x("INSERT INTO projects(name, title, members, created_at) VALUES ('team-a', 'Team A', '{}', 'x')")
+    pid = S.project("team-a")["id"]
+    ssh_target, crypto_target = f"127.0.0.1:{ssh_server.port}", f"127.0.0.1:{s.port}"
+
+    run(capsys, data_dir, "ssh", "scan", ssh_target, "--project", "team-a")
+    run(capsys, data_dir, "crypto", "scan", crypto_target, "--timeout", "3", "--project", "team-a")
+
+    ssh = S.q1("SELECT project_id FROM ssh_hosts WHERE host='127.0.0.1' AND port=?", (ssh_server.port,))
+    crypto = S.q1("SELECT project_id FROM crypto_assets WHERE target=?", (crypto_target,))
+    assert ssh["project_id"] == pid and crypto["project_id"] == pid
+
+
+def test_scans_reject_unknown_project(capsys, data_dir, engine, ssh_server, served):
+    s, _ = served
+    for cmd, target in (("ssh", f"127.0.0.1:{ssh_server.port}"), ("crypto", f"127.0.0.1:{s.port}")):
+        with pytest.raises(SystemExit) as e:
+            main(["--data", str(data_dir), cmd, "scan", target, "--project", "missing"])
+        assert e.value.code != 0
+        assert "no project named missing" in capsys.readouterr().err
+
+
 # ---- certificates and endpoints -----------------------------------------------------------------------
 
 def test_certs_show(capsys, data_dir, engine, served):
