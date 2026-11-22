@@ -182,6 +182,17 @@ def _endpoint(eng, ref: str) -> dict:
     return ep
 
 
+def _scan_project_id(eng, name: str | None) -> int | None:
+    """Resolve ``--project`` for a scan; ``None`` keeps the existing default-project behaviour."""
+    if name is None:
+        return None
+    project = eng.store.project(name)
+    if not project:
+        print(f"farrier: no project named {name}", file=sys.stderr)
+        sys.exit(1)
+    return project["id"]
+
+
 def cmd_version(args):
     from farrier import __version__
     print(f"farrier {__version__}")
@@ -196,7 +207,8 @@ def cmd_ssh_scan(args):
     if not targets:
         sys.exit("farrier: no targets")
     eng = _engine(args)
-    out = scan.scan(eng.store, targets)
+    project_id = _scan_project_id(eng, args.project)
+    out = scan.scan(eng.store, targets, project_id=project_id)
     eng.store.log(f"ssh scan of {len(targets)} targets by cli: {out['ssh']} answered")
     hosts = [scan.host_view(h) for t in targets if (h := db.host_by_addr(eng.store, *t))]
 
@@ -237,8 +249,9 @@ def cmd_crypto_scan(args):
         if not targets:
             sys.exit("farrier: no targets")
         eng = _engine(args)
+        project_id = _scan_project_id(eng, args.project)
         timeout = args.timeout if args.timeout is not None else float(eng.settings.get("scan_timeout", 5.0))
-        out = service.scan_targets(eng.store, targets, timeout=timeout)
+        out = service.scan_targets(eng.store, targets, timeout=timeout, project_id=project_id)
     except ValueError as e:
         sys.exit(f"farrier: {e}")
     eng.store.log(f"crypto scan of {len(targets)} targets by cli")
@@ -612,6 +625,7 @@ def main(argv=None):
     x = js(ssub.add_parser("scan", help="probe SSH targets without logging in: banner, host keys, PQC key "
                            "exchange, findings; results are stored"))
     x.add_argument("targets", nargs="+", help="host[:port] or CIDR (default port 22)")
+    x.add_argument("--project", help="project to file new results under (default: default)")
     x.set_defaults(fn=cmd_ssh_scan)
     js(ssub.add_parser("keys", help="list collected authorized keys with their findings")).set_defaults(fn=cmd_ssh_keys)
 
@@ -620,6 +634,7 @@ def main(argv=None):
     x = js(csub.add_parser("scan", help="probe TLS targets: versions, key exchange, PQC status; results are stored"))
     x.add_argument("targets", nargs="+", help="host[:port], 10.0.0.0/24:443|8443, sni@ip:port")
     x.add_argument("--timeout", type=float, default=None, help="seconds per handshake (default: scan_timeout setting)")
+    x.add_argument("--project", help="project to file new results under (default: default)")
     x.set_defaults(fn=cmd_crypto_scan)
     js(csub.add_parser("summary", help="stored assets by PQC status, key algorithm and weak-crypto flag")
        ).set_defaults(fn=cmd_crypto_summary)
